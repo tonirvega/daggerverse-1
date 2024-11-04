@@ -42,9 +42,12 @@ type K3S struct {
 	Name string
 
 	// +private
-	ConfigCache *dagger.CacheVolume
+	ConfigCache *dagger.Directory
 
 	Container *dagger.Container
+
+	// +optional
+	ConfigFile *dagger.File
 }
 
 func New(
@@ -53,14 +56,16 @@ func New(
 	// +default="rancher/k3s:latest"
 	image string,
 ) *K3S {
-	ccache := dag.CacheVolume("k3s_config_" + name)
+
+	ccache := dag.Directory()
+
 	ctr := dag.Container().
 		From(image).
 		WithNewFile("/usr/bin/entrypoint.sh", entrypoint, dagger.ContainerWithNewFileOpts{
 			Permissions: 0o755,
 		}).
 		WithEntrypoint([]string{"entrypoint.sh"}).
-		WithMountedCache("/etc/rancher/k3s", ccache).
+		WithDirectory("/etc/rancher/k3s", ccache).
 		WithMountedTemp("/etc/lib/cni").
 		WithMountedTemp("/var/lib/kubelet").
 		WithMountedTemp("/var/lib/rancher/k3s").
@@ -98,11 +103,18 @@ func (m *K3S) Config(ctx context.Context,
 	// +default=false
 	local bool,
 ) *dagger.File {
-	return dag.Container().
+
+	if m.ConfigFile != nil {
+
+		return m.ConfigFile
+
+	}
+
+	m.ConfigFile = dag.Container().
 		From("alpine").
 		// we need to bust the cache so we don't fetch the same file each time.
 		WithEnvVariable("CACHE", time.Now().String()).
-		WithMountedCache("/cache/k3s", m.ConfigCache).
+		WithDirectory("/cache/k3s", m.ConfigCache).
 		WithExec([]string{"cp", "/cache/k3s/k3s.yaml", "k3s.yaml"}).
 		With(func(c *dagger.Container) *dagger.Container {
 			if local {
@@ -111,6 +123,8 @@ func (m *K3S) Config(ctx context.Context,
 			return c
 		}).
 		File("k3s.yaml")
+
+	return m.ConfigFile
 }
 
 // runs kubectl on the target k3s cluster
@@ -118,7 +132,7 @@ func (m *K3S) Kubectl(ctx context.Context, args string) *dagger.Container {
 	return dag.Container().
 		From("bitnami/kubectl").
 		WithoutEntrypoint().
-		WithMountedCache("/cache/k3s", m.ConfigCache).
+		WithDirectory("/cache/k3s", m.ConfigCache).
 		WithEnvVariable("CACHE", time.Now().String()).
 		WithFile("/.kube/config", m.Config(ctx, false), dagger.ContainerWithFileOpts{Permissions: 1001}).
 		WithUser("1001").
@@ -130,7 +144,7 @@ func (m *K3S) Kns(ctx context.Context) *dagger.Container {
 	return dag.Container().
 		From("derailed/k9s").
 		WithoutEntrypoint().
-		WithMountedCache("/cache/k3s", m.ConfigCache).
+		WithDirectory("/cache/k3s", m.ConfigCache).
 		WithEnvVariable("CACHE", time.Now().String()).
 		WithEnvVariable("KUBECONFIG", "/.kube/config").
 		WithFile("/.kube/config", m.Config(ctx, false), dagger.ContainerWithFileOpts{Permissions: 1001}).
