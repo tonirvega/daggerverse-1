@@ -63,6 +63,7 @@ func (m *Examples) K3SServer(ctx context.Context) (*dagger.Service, error) {
 		return k.WithContainer(
 			k.Container().
 				WithEnvVariable("BUST", time.Now().String()).
+				WithNewFile("/etc/rancher/k3s/registries.yaml", "").
 				WithExec([]string{"sh", "-c", `
 cat <<EOF > /etc/rancher/k3s/registries.yaml
 mirrors:
