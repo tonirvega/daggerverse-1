@@ -45,6 +45,9 @@ type K3S struct {
 	ConfigCache *dagger.Directory
 
 	Container *dagger.Container
+
+	// +optional
+	ConfigFile *dagger.File
 }
 
 func New(
@@ -100,7 +103,14 @@ func (m *K3S) Config(ctx context.Context,
 	// +default=false
 	local bool,
 ) *dagger.File {
-	return dag.Container().
+
+	if m.ConfigFile != nil {
+
+		return m.ConfigFile
+
+	}
+
+	m.ConfigFile = dag.Container().
 		From("alpine").
 		// we need to bust the cache so we don't fetch the same file each time.
 		WithEnvVariable("CACHE", time.Now().String()).
@@ -113,6 +123,8 @@ func (m *K3S) Config(ctx context.Context,
 			return c
 		}).
 		File("k3s.yaml")
+
+	return m.ConfigFile
 }
 
 // runs kubectl on the target k3s cluster
