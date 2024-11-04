@@ -60,16 +60,18 @@ func (m *Examples) K3SServer(ctx context.Context) (*dagger.Service, error) {
 	}
 
 	return dag.K3S("test").With(func(k *dagger.K3S) *dagger.K3S {
-		return k.WithContainer(
-			k.Container().
-				WithEnvVariable("BUST", time.Now().String()).
-				WithExec([]string{"sh", "-c", `
-cat <<EOF > /etc/rancher/k3s/registries.yaml
+
+		registries := `
 mirrors:
   "registry:5000":
     endpoint:
-      - "http://registry:5000"
-EOF`}).
+	  - "http://registry:5000"
+`
+
+		return k.WithContainer(
+			k.Container().
+				WithEnvVariable("BUST", time.Now().String()).
+				WithNewFile("/etc/rancher/k3s/registries.yaml", registries).
 				WithServiceBinding("registry", regSvc),
 		)
 	}).Server(), nil
