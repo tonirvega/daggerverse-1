@@ -63,10 +63,10 @@ func New(
 		}).
 		WithEntrypoint([]string{"entrypoint.sh"}).
 		WithDirectory("/etc/rancher/k3s", ccache).
-		// WithMountedTemp("/etc/lib/cni").
-		// WithMountedTemp("/var/lib/kubelet").
-		// WithMountedTemp("/var/lib/rancher/k3s").
-		// WithMountedTemp("/var/log").
+		WithMountedTemp("/etc/lib/cni").
+		WithMountedTemp("/var/lib/kubelet").
+		WithMountedTemp("/var/lib/rancher/k3s").
+		WithMountedTemp("/var/log").
 		WithExposedPort(6443)
 	return &K3S{
 		Name:        name,
