@@ -63,7 +63,7 @@ func New(
 		WithMountedCache("/etc/rancher/k3s", ccache).
 		WithMountedTemp("/etc/lib/cni").
 		WithMountedTemp("/var/lib/kubelet").
-		WithMountedTemp("/var/lib/rancher/k3s").
+		WithDirectory("/var/lib/rancher/k3s", dag.Directory()).
 		WithMountedTemp("/var/log").
 		WithExposedPort(6443)
 	return &K3S{
