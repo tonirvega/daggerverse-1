@@ -63,7 +63,10 @@ func New(
 		WithMountedCache("/etc/rancher/k3s", ccache).
 		WithMountedTemp("/etc/lib/cni").
 		WithMountedTemp("/var/lib/kubelet").
-		WithMountedTemp("/var/lib/rancher/k3s").
+		WithMountedTemp("/var/lib/rancher/k3s", dagger.ContainerWithMountedTempOpts{
+			Size:   12 * 1024 * 1024 * 1024,
+			Expand: true,
+		}).
 		WithMountedTemp("/var/log").
 		WithExposedPort(6443)
 	return &K3S{
